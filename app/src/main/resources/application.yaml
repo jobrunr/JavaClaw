@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: AgentRunr
+  datasource:
+    url: jdbc:h2:file:./workspace/app
+  ai:
+    model:
+      chat: unknown
+      audio.speech: unknown
+      audio.transcription: unknown
+      embedding: unknown
+      image: unknown
+      moderation: unknown
+pebble:
+  suffix: .html.peb
+agent:
+  onboarding:
+    completed: false
+  workspace: file:./workspace/
+jobrunr:
+  background-job-server:
+    enabled: true
+    worker-count: 1
+  dashboard:
+    enabled: true
+    port: 8081

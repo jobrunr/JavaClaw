@@ -1,0 +1,51 @@
+plugins {
+    id 'org.springframework.boot' version '4.0.3' apply false
+    id 'io.spring.dependency-management' version '1.1.7' apply false
+}
+
+description = 'AgentRunr'
+
+allprojects {
+    group = 'ai.agentrunr'
+    version = System.getenv('CI_COMMIT_TAG')?.replace("v", "") ?: "v1.0.0-SNAPSHOT".replace("v", "")
+
+    repositories {
+        mavenCentral()
+        maven { url = 'https://repo.spring.io/snapshot' }
+        maven { url = 'https://repo.spring.io/milestone' }
+        maven {
+            name = 'central-portal-snapshots'
+            url = 'https://central.sonatype.com/repository/maven-snapshots/'
+        }
+    }
+}
+
+// Explicitly configure only real projects
+configure(subprojects.findAll { it.buildFile.exists() }) {
+    apply plugin: 'io.spring.dependency-management'
+
+    ext {
+        springAiVersion = '2.0.0-SNAPSHOT'
+        springModulithVersion = '2.0.3'
+    }
+
+    dependencyManagement {
+        imports {
+            mavenBom "org.springframework.boot:spring-boot-dependencies:4.0.3"
+            mavenBom "org.springframework.ai:spring-ai-bom:2.0.0-SNAPSHOT"
+            mavenBom "org.springframework.modulith:spring-modulith-bom:2.0.3"
+        }
+    }
+
+    plugins.withType(JavaPlugin) {
+        java {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(25)
+            }
+        }
+
+        tasks.named('test') {
+            useJUnitPlatform()
+        }
+    }
+}

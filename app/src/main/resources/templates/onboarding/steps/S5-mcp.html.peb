@@ -1,0 +1,134 @@
+<div id="onboarding-step" class="step-fragment">
+    <p class="is-uppercase has-text-weight-semibold has-text-grey is-size-7 mb-3">Step {{ currentStepNumber }} of {{ totalSteps }}</p>
+    <h2 class="title is-3 mb-3">Configure MCP servers.</h2>
+    <p class="subtitle is-5 has-text-grey-dark">Add any MCP servers your agent should connect to. Supports Streamable HTTP and stdio transports. This step is optional.</p>
+
+    {% if error %}
+    <article class="message is-danger">
+        <div class="message-body">{{ error }}</div>
+    </article>
+    {% endif %}
+
+    {% if servers | length > 0 %}
+    <div class="mb-5">
+        {% for server in servers %}
+        <div class="box py-3 px-4 mb-2">
+            <div class="is-flex is-align-items-center is-justify-content-space-between">
+                <div>
+                    <span class="has-text-weight-semibold">{{ server.name }}</span>
+                    <span class="tag is-light ml-2">{{ server.type }}</span>
+                    <p class="is-size-7 has-text-grey mt-1">
+                        {% if server.type == "streamable-http" %}{{ server.url }}{% else %}{{ server.command }}{% endif %}
+                    </p>
+                </div>
+                <form method="post" action="/onboarding/mcp">
+                    <input type="hidden" name="action" value="remove">
+                    <input type="hidden" name="serverIndex" value="{{ loop.index }}">
+                    <button type="submit" class="button is-small is-danger is-light">Remove</button>
+                </form>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <form method="post" action="/onboarding/mcp">
+        <input type="hidden" name="action" value="add">
+        <div class="box">
+            <p class="has-text-weight-semibold mb-4">Add an MCP server</p>
+
+            <div class="columns">
+                <div class="column">
+                    <div class="field">
+                        <label class="label" for="serverName">Name</label>
+                        <div class="control">
+                            <input id="serverName" class="input" type="text" name="serverName" placeholder="e.g. workspacemcp" autocomplete="off">
+                        </div>
+                        <p class="help">Connection identifier — letters, numbers, hyphens, underscores.</p>
+                    </div>
+                </div>
+                <div class="column is-narrow">
+                    <div class="field">
+                        <label class="label" for="serverType">Transport</label>
+                        <div class="control">
+                            <div class="select">
+                                <select id="serverType" name="serverType" onchange="mcpToggleType(this.value)">
+                                    <option value="streamable-http">Streamable HTTP</option>
+                                    <option value="stdio">stdio</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="mcpHttpFields">
+                <div class="field">
+                    <label class="label" for="serverUrl">URL</label>
+                    <div class="control">
+                        <input id="serverUrl" class="input" type="text" name="serverUrl" placeholder="http://localhost:8000/mcp" autocomplete="off">
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label" for="serverHeaders">
+                        Headers
+                        <span class="has-text-weight-normal has-text-grey is-size-7 ml-1">(optional — one per line: <code>Key: Value</code>)</span>
+                    </label>
+                    <div class="control">
+                        <textarea id="serverHeaders" class="textarea is-small" name="serverHeaders" rows="3"
+                                  placeholder="Authorization: Bearer your-token&#10;X-Custom-Header: value"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div id="mcpStdioFields" style="display:none">
+                <div class="field">
+                    <label class="label" for="serverCommand">Command</label>
+                    <div class="control">
+                        <input id="serverCommand" class="input" type="text" name="serverCommand" placeholder="npx" autocomplete="off">
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label" for="serverArgs">
+                        Arguments
+                        <span class="has-text-weight-normal has-text-grey is-size-7 ml-1">(optional — one per line)</span>
+                    </label>
+                    <div class="control">
+                        <textarea id="serverArgs" class="textarea is-small" name="serverArgs" rows="3"
+                                  placeholder="-y&#10;@modelcontextprotocol/server-filesystem&#10;/path/to/dir"></textarea>
+                    </div>
+                </div>
+                <div class="field">
+                    <label class="label" for="serverEnv">
+                        Environment variables
+                        <span class="has-text-weight-normal has-text-grey is-size-7 ml-1">(optional — one per line: <code>KEY=VALUE</code>)</span>
+                    </label>
+                    <div class="control">
+                        <textarea id="serverEnv" class="textarea is-small" name="serverEnv" rows="3"
+                                  placeholder="API_KEY=your-key&#10;DEBUG=true"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="buttons mt-3">
+                <button class="button is-info" type="submit">Add server</button>
+            </div>
+        </div>
+    </form>
+
+    <form method="post" action="/onboarding/mcp">
+        <input type="hidden" name="action" value="continue">
+        <div class="buttons mt-4">
+            <a class="button is-light is-medium" href="{{ previousStepUrl }}">Back</a>
+            <button class="button is-primary is-medium" type="submit">Continue</button>
+            {% if isOptional %}<a class="button is-ghost is-medium" href="{{ nextStepUrl }}">Skip</a>{% endif %}
+        </div>
+    </form>
+
+    <script>
+        function mcpToggleType(type) {
+            document.getElementById('mcpHttpFields').style.display = type === 'streamable-http' ? '' : 'none';
+            document.getElementById('mcpStdioFields').style.display = type === 'stdio' ? '' : 'none';
+        }
+    </script>
+</div>

@@ -1,0 +1,46 @@
+<div id="onboarding-step" class="step-fragment">
+    <p class="is-uppercase has-text-weight-semibold has-text-grey is-size-7 mb-3">Step {{ currentStepNumber }} of {{ totalSteps }}</p>
+    <h2 class="title is-3 mb-3">Add your Telegram bot token.</h2>
+    <p class="subtitle is-5 has-text-grey-dark">To communicate with your agent, you will need to create a Telegram bot via the
+     Telegram <a href="https://web.telegram.org/k/#@BotFather" target="_blank">@BotFather</a>.<br /><br />
+     Once you have done so, you will get a token which will be written to application.yaml and used
+        by the Telegram integration. Only the configured Telegram username will be allowed to communicate
+        with your AI Assistant.
+    </p>
+
+    {% if error %}
+    <article class="message is-danger">
+        <div class="message-body">{{ error }}</div>
+    </article>
+    {% endif %}
+
+    <form method="post" action="/onboarding/telegram">
+        <div class="field">
+            <label class="label" for="telegramBotToken">Telegram bot token</label>
+            <div class="control">
+                <input id="telegramBotToken" class="input is-medium" type="password" name="telegramBotToken" placeholder="Paste the Telegram bot token" autocomplete="off">
+            </div>
+        </div>
+
+        <div class="field">
+            <label class="label" for="telegramUsername">Allowed Telegram username</label>
+            <div class="control">
+                <input id="telegramUsername" class="input is-medium" type="text" name="telegramUsername" value="{{ telegramUsername }}" placeholder="@your_username" autocomplete="off" autocapitalize="none" spellcheck="false">
+            </div>
+            <p class="help">Only this Telegram username will be able to send messages to the bot. You can enter it with or without the @ prefix.</p>
+        </div>
+
+        <div class="notification is-light mt-4">
+            <p class="has-text-weight-semibold mb-2">Stored properties</p>
+            <p class="has-text-grey-dark">agent.channels.telegram.token</p>
+            <p class="has-text-grey-dark">agent.channels.telegram.username</p>
+        </div>
+
+        <div class="buttons mt-4">
+            <a class="button is-light is-medium" href="{{ previousStepUrl }}">Back</a>
+            <button class="button is-primary is-medium" type="submit">Continue</button>
+            {% if isOptional %}<a class="button is-ghost is-medium" href="{{ nextStepUrl }}">Skip</a>{% endif %}
+            <span class="button is-ghost is-medium htmx-indicator">Saving...</span>
+        </div>
+    </form>
+</div>

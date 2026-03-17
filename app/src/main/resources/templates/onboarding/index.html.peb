@@ -1,0 +1,111 @@
+{% extends "../base" %}
+
+{% block title %} Onboarding{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@samlam140330/bulma-timeline@1.0.3/dist/css/bulma-timeline.min.css">
+<style>
+    .provider-card {
+        border: 2px solid var(--bulma-border);
+        border-radius: var(--bulma-radius-large);
+        padding: 1rem;
+        transition: border-color 140ms ease, box-shadow 140ms ease;
+        cursor: pointer;
+        display: block;
+        background: var(--bulma-white);
+    }
+
+    .provider-card:hover {
+        border-color: var(--bulma-primary);
+        box-shadow: var(--bulma-shadow);
+    }
+
+    .provider-card.is-selected {
+        border-color: var(--bulma-primary);
+        box-shadow: var(--bulma-shadow);
+    }
+
+    .step-fragment {
+        animation: step-enter 220ms ease;
+    }
+
+    textarea.textarea.is-agent-editor {
+        min-height: 22rem;
+        font-family: "SFMono-Regular", "Menlo", monospace;
+    }
+
+    .htmx-indicator {
+        opacity: 0;
+        transition: opacity 120ms ease;
+    }
+
+    .htmx-request .htmx-indicator,
+    .htmx-request.htmx-indicator {
+        opacity: 1;
+    }
+
+    @keyframes step-enter {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Timeline overrides for dark sidebar */
+    .sidebar-timeline .timeline-item::before {
+        background-color: rgba(255, 255, 255, 0.15);
+    }
+    .sidebar-timeline .timeline-item .timeline-marker {
+        background: rgba(255, 255, 255, 0.18) !important;
+        border-color: rgba(255, 255, 255, 0.3) !important;
+    }
+    .sidebar-timeline .timeline-item .timeline-marker.is-icon > * {
+        color: rgba(255, 255, 255, 0.75) !important;
+    }
+    div.sidebar-timeline .timeline-item {
+        padding-bottom: 0.25em;
+    }
+    div.sidebar-timeline .timeline-item .timeline-content {
+        padding-top: 1.2em;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="section py-5">
+    <div class="container is-max-desktop">
+        <div class="columns is-variable is-6">
+            <div class="column is-5">
+                <aside class="box has-background-dark has-text-white">
+                    <div class="brand-lockup mb-5">
+                        <p class="is-size-7 has-text-primary has-text-weight-bold is-uppercase mb-1" style="letter-spacing: 0.1em">Setup Wizard</p>
+                        <p class="brand-word mb-0"><span class="brand-agent">Agent</span><span class="brand-runr">Runr</span></p>
+                    </div>
+                    <h1 class="title is-3 has-text-white mb-3">Turn a blank install into a ready-to-run assistant.</h1>
+                    <p class="has-text-grey-light mb-5">Choose a model provider, save credentials, tune your workspace instructions, and mark onboarding complete for the next restart.</p>
+                    <p class="is-size-7 has-text-grey mb-5 has-text-centered">Powered by <a href="https://spring.io/projects/spring-ai" target="_blank" rel="noopener noreferrer" class="has-text-grey-light">Spring AI</a> &amp; <a href="https://www.jobrunr.io" target="_blank" rel="noopener noreferrer" class="has-text-grey-light">JobRunr</a></p>
+
+                    <div class="timeline no-headers sidebar-timeline">
+                        {% for step in steps %}
+                        {% set stepNum = loop.index + 1 %}
+                        <div class="timeline-item {% if loop.first %}is-first{% endif %}{% if loop.last %} is-last{% endif %}{% if stepNum <= currentStepNumber %} is-primary{% endif %}">
+                            <div class="timeline-marker is-icon{% if stepNum <= currentStepNumber %} is-primary{% endif %}">
+                                <span>{{ stepNum }}</span>
+                            </div>
+                            <div class="timeline-content">
+                                <p class="is-size-6{% if stepNum == currentStepNumber %} has-text-white has-text-weight-semibold{% elseif stepNum < currentStepNumber %} has-text-grey-light{% else %} has-text-grey-light{% endif %}">
+                                    {{ step.title }}{% if step.optional %} <span class="is-size-7 has-text-grey ml-1">(optional)</span>{% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </aside>
+            </div>
+            <div class="column is-7">
+                <div class="box" data-theme="light">
+                    {% include stepTemplate %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

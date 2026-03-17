@@ -1,0 +1,29 @@
+<html lang="en">
+<head>
+    <title>AgentRunr{% block title %}{% endblock %}</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.4/css/bulma.min.css">
+    <style>
+    .brand-lockup {
+        border-left: 3px solid var(--bulma-primary);
+        padding-left: .65rem;
+        line-height: 1.15;
+    }
+    .brand-word {
+        font-size: 1.1rem;
+        font-weight: 800;
+    }
+    .brand-word .brand-agent { color: #fff; }
+    .brand-word .brand-runr  { color: var(--bulma-primary); }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body hx-boost="true">
+<div id="content">
+    {% block content %}{% endblock %}
+</div>
+<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js" integrity="sha384-/TgkGk7p307TH7EXJDuUlgG3Ce1UVolAOFopFekQkkXihi5u/6OCvVKyz1W+idaz" crossorigin="anonymous"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

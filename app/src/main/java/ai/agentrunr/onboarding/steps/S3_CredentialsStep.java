@@ -1,0 +1,71 @@
+package ai.agentrunr.onboarding.steps;
+
+import ai.agentrunr.SupportedProvider;
+import ai.agentrunr.onboarding.OnboardingProvider;
+import org.springframework.core.annotation.Order;
+import org.springframework.stereotype.Component;
+
+import java.util.Map;
+
+@Component
+@Order(30)
+public class S3_CredentialsStep implements OnboardingProvider {
+
+    @Override
+    public String getStepId() {return "credentials";}
+
+    @Override
+    public String getStepTitle() {return "Credentials";}
+
+    @Override
+    public String getTemplatePath() {return "onboarding/steps/S3-credentials";}
+
+    @Override
+    public void prepareModel(Map<String, Object> session, Map<String, Object> model) {
+        String providerId = (String) session.getOrDefault(S2_ProviderStep.SESSION_PROVIDER, "");
+        SupportedProvider provider = SupportedProvider.from(providerId).orElse(null);
+        if (provider == null) return;
+
+        String currentModel = (String) session.get(S2_ProviderStep.SESSION_MODEL);
+        model.put("selectedProvider", provider.id());
+        model.put("providerLabel", provider.label());
+        model.put("providerApiPropertyKey", provider.createPropertyKey("api-key"));
+        model.put("chatModelPropertyKey", provider.createPropertyKey("chat.options.model"));
+        model.put("requiresApiKey", provider.requiresApiKey());
+        model.put("apiKey", session.getOrDefault(S2_ProviderStep.SESSION_API_KEY, ""));
+        model.put("model", currentModel != null && !currentModel.isBlank() ? currentModel : provider.defaultModel());
+        provider.systemWideToken().ifPresent(t -> model.put("systemWideTokenName", t.name()));
+    }
+
+    @Override
+    public String processStep(Map<String, String> formParams, Map<String, Object> session) {
+        String providerId = (String) session.getOrDefault(S2_ProviderStep.SESSION_PROVIDER, "");
+        SupportedProvider provider = SupportedProvider.from(providerId).orElse(null);
+        if (provider == null) {
+            return "Provider selection is missing. Please go back and select a provider.";
+        }
+
+        String model = formParams.getOrDefault("model", "").trim();
+        String apiKey = formParams.getOrDefault("apiKey", "").trim();
+
+        if (model.isBlank()) {
+            return "Enter a model to continue.";
+        }
+
+        if ("true".equals(formParams.get("useSystemToken"))) {
+            SupportedProvider.SystemWideToken sysToken = provider.systemWideToken().orElse(null);
+            if (sysToken == null) {
+                return "System token is no longer available. Please enter your API key manually.";
+            }
+            apiKey = sysToken.token();
+        }
+
+        if (provider.requiresApiKey() && apiKey.isBlank()) {
+            return "Enter an API key to continue.";
+        }
+
+        session.put(S2_ProviderStep.SESSION_MODEL, model);
+        session.put(S2_ProviderStep.SESSION_API_KEY, apiKey);
+        return null;
+    }
+}

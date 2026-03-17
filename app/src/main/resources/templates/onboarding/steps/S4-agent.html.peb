@@ -1,0 +1,26 @@
+<div id="onboarding-step" class="step-fragment">
+    <p class="is-uppercase has-text-weight-semibold has-text-grey is-size-7 mb-3">Step {{ currentStepNumber }} of {{ totalSteps }}</p>
+    <h2 class="title is-3 mb-3">Edit workspace AGENT.md.</h2>
+    <p class="subtitle is-5 has-text-grey-dark">These instructions guide the assistant behavior inside your workspace. Start from the existing content and tighten it to your workflow.</p>
+
+    {% if error %}
+    <article class="message is-danger">
+        <div class="message-body">{{ error }}</div>
+    </article>
+    {% endif %}
+
+    <form method="post" action="/onboarding/agent">
+        <div class="field">
+            <label class="label" for="agentContent">Workspace instructions</label>
+            <div class="control">
+                <textarea id="agentContent" class="textarea is-agent-editor" name="agentContent">{{ agentContent }}</textarea>
+            </div>
+        </div>
+
+        <div class="buttons mt-4">
+            <a class="button is-light is-medium" href="{{ previousStepUrl }}">Back</a>
+            <button class="button is-primary is-medium" type="submit">Continue</button>
+            <span class="button is-ghost is-medium htmx-indicator">Writing file...</span>
+        </div>
+    </form>
+</div>

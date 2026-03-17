@@ -1,0 +1,14 @@
+<div id="onboarding-step" class="step-fragment">
+    <p class="is-uppercase has-text-weight-semibold has-text-grey is-size-7 mb-3">Step {{ currentStepNumber }} of {{ totalSteps }}</p>
+    <h2 class="title is-3 mb-3"><span class="brand-word" style="font-size: inherit">Agent<span class="brand-runr">Runr</span></span> is configured.</h2>
+    <p class="subtitle is-5 has-text-grey-dark">All settings have been saved and setup is complete. You can now start interacting with your agent through Telegram.</p>
+
+    <div class="notification is-light content">
+        <p><strong>Provider:</strong> {{ providerLabel }}</p>
+        <p><strong>Status:</strong> ready for your questions!</p>
+    </div>
+
+    <div class="buttons mt-4">
+        <a class="button is-primary is-medium" href="/chat" hx-boost="false">Start chatting</a>
+    </div>
+</div>

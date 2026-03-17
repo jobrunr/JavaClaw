@@ -1,0 +1,21 @@
+<div id="onboarding-step" class="step-fragment">
+    <p class="is-uppercase has-text-weight-semibold has-text-grey is-size-7 mb-3">Step {{ currentStepNumber }} of {{ totalSteps }}</p>
+    <h2 class="title is-3 mb-3">Set up <span class="brand-word" style="font-size: inherit">Agent<span class="brand-runr">Runr</span></span> for real work.</h2>
+    <p class="subtitle is-5 has-text-grey-dark">This flow configures your chat provider, stores the required credentials, and lets you edit the workspace instructions that shape assistant behavior.</p>
+
+    <div class="notification is-light content">
+        <p class="mb-2"><strong>What happens here:</strong></p>
+        <ul>
+            <li>Select one of the supported providers: Ollama, ChatGPT, or Anthropic.</li>
+            <li>Store an API key when the selected provider needs one.</li>
+            <li>Edit the workspace AGENT.md file before you start using the app.</li>
+            <li>Add the Telegram bot token used by the Telegram integration.</li>
+            <li>Mark onboarding complete!</li>
+        </ul>
+    </div>
+
+    <div class="buttons mt-4">
+        <a class="button is-primary is-medium" href="{{ nextStepUrl }}">Start</a>
+        <span class="button is-ghost is-medium htmx-indicator">Loading...</span>
+    </div>
+</div>

@@ -1,0 +1,7 @@
+rootProject.name = 'AgentRunr'
+
+include 'base'
+include 'plugins'
+include 'plugins:telegram'
+include 'app'
+
