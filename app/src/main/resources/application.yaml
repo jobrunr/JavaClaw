@@ -5,12 +5,17 @@ spring:
     url: jdbc:h2:file:./workspace/app
   ai:
     model:
-      chat: unknown
+      chat: anthropic
       audio.speech: unknown
       audio.transcription: unknown
       embedding: unknown
       image: unknown
       moderation: unknown
+    anthropic:
+      chat:
+        options:
+          model: claude-sonnet-4-6
+      api-key: <claude-code-bearer-token>
 pebble:
   suffix: .html.peb
 agent:

@@ -9,13 +9,17 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 @SpringBootApplication
 public class AgentRunrApplication {
 
     private static final Logger log = LoggerFactory.getLogger(AgentRunrApplication.class);
 
     public static void main(String[] args) {
-        SpringApplication.run(AgentRunrApplication.class, args);
+        SpringApplication app = new SpringApplication(AgentRunrApplication.class);
+        app.setDefaultProperties(Map.of("spring.ai.mcp.client.enabled", "false"));
+        app.run(args);
     }
 
     @Component

@@ -23,6 +23,7 @@ import org.springframework.context.annotation.Configuration;
 public class AnthropticClaudeCodeConfiguration {
 
     public static final String CLAUDE_CODE_OATH_TOKEN_PLACEHOLDER = "<claude-code-bearer-token>";
+    public static final String CLAUDE_CODE_SYSTEM_PROMPT_PREFIX = "You are Claude Code, Anthropic's official CLI for Claude.";
 
     @Bean
     public AnthropicChatModel anthropicChatModel(AnthropicConnectionProperties connectionProperties,

@@ -22,9 +22,11 @@ import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
+import io.modelcontextprotocol.client.McpSyncClient;
 import org.springframework.ai.mcp.SyncMcpToolCallbackProvider;
 import org.springframework.ai.model.SpringAIModelProperties;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -55,6 +57,12 @@ public class AgentRunrConfiguration {
     @Bean
     public TaskTool taskTool(TaskManager taskManager) {
         return TaskTool.builder().taskManager(taskManager).build();
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public SyncMcpToolCallbackProvider syncMcpToolCallbackProvider() {
+        return new SyncMcpToolCallbackProvider(List.<McpSyncClient>of());
     }
 
     @Bean

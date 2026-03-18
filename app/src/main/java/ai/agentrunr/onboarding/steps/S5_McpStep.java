@@ -95,6 +95,7 @@ public class S5_McpStep implements OnboardingProvider {
         if (servers.isEmpty()) return;
 
         Map<String, Object> props = new LinkedHashMap<>();
+        props.put("spring.ai.mcp.client.enabled", true);
         for (Map<String, Object> server : servers) {
             String name = (String) server.get("name");
             String type = (String) server.get("type");
