@@ -24,6 +24,7 @@ import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
 import org.springframework.ai.mcp.SyncMcpToolCallbackProvider;
 import org.springframework.ai.model.SpringAIModelProperties;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -62,7 +63,7 @@ public class AgentRunrConfiguration {
     @DependsOn({"mcpHeaderCustomizer"})
     public ChatClient chatClient(ChatClient.Builder chatClientBuilder,
                                  ChatMemory chatMemory,
-                                 SyncMcpToolCallbackProvider mcpToolProvider,
+                                 ObjectProvider<SyncMcpToolCallbackProvider> mcpToolProvider,
                                  TaskManager taskManager,
                                  ConfigurationManager configurationManager,
                                  @Value("${agent.workspace:Unknown}") Resource workspace,
@@ -74,8 +75,9 @@ public class AgentRunrConfiguration {
 
         chatClientBuilder
                 .defaultAdvisors(new SimpleLoggerAdvisor())
-                .defaultSystem(p -> p.text(agentPrompt).param(AgentEnvironment.ENVIRONMENT_INFO_KEY, AgentEnvironment.info()))
-                .defaultToolCallbacks(mcpToolProvider.getToolCallbacks())
+                .defaultSystem(p -> p.text(agentPrompt).param(AgentEnvironment.ENVIRONMENT_INFO_KEY, AgentEnvironment.info()));
+        mcpToolProvider.ifAvailable(provider -> chatClientBuilder.defaultToolCallbacks(provider.getToolCallbacks()));
+        chatClientBuilder
                 .defaultToolCallbacks(SkillsTool.builder().addSkillsDirectory(skillsDir(workspace).toString()).build())
                 .defaultTools(
                         TaskTool.builder().taskManager(taskManager).build(),
