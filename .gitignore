@@ -42,4 +42,4 @@ workspace/skills/*
 !workspace/skills/skill-creator
 workspace/tasks/*
 workspace/app.*
-*.private
+*.private*

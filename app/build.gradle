@@ -6,6 +6,8 @@ plugins {
 dependencies {
     implementation project(':base')
     implementation project(':plugins:telegram')
+    implementation project(':plugins:playwright')
+    implementation project(':plugins:brave')
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
     implementation 'org.springframework.boot:spring-boot-starter-restclient'

@@ -3,10 +3,10 @@ package ai.agentrunr;
 import ai.agentrunr.configuration.ConfigurationManager;
 import ai.agentrunr.tasks.TaskManager;
 import ai.agentrunr.tools.AgentEnvironment;
+import ai.agentrunr.tools.AutoDiscoveredTool;
 import ai.agentrunr.tools.CheckListTool;
 import ai.agentrunr.tools.McpTool;
 import ai.agentrunr.tools.TaskTool;
-import org.springaicommunity.agent.tools.BraveWebSearchTool;
 import org.springaicommunity.agent.tools.FileSystemTools;
 import org.springaicommunity.agent.tools.ShellTools;
 import org.springaicommunity.agent.tools.SkillsTool;
@@ -16,7 +16,7 @@ import org.springframework.ai.chat.client.advisor.MessageChatMemoryAdvisor;
 import org.springframework.ai.chat.client.advisor.SimpleLoggerAdvisor;
 import org.springframework.ai.chat.client.advisor.ToolCallAdvisor;
 import org.springframework.ai.chat.memory.ChatMemory;
-import org.springframework.ai.chat.memory.InMemoryChatMemoryRepository;
+import org.springframework.ai.chat.memory.ChatMemoryRepository;
 import org.springframework.ai.chat.memory.MessageWindowChatMemory;
 import org.springframework.ai.chat.messages.AssistantMessage;
 import org.springframework.ai.chat.model.ChatModel;
@@ -36,7 +36,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Optional;
+import java.util.Set;
 
 @Configuration
 public class AgentRunrConfiguration {
@@ -48,9 +48,8 @@ public class AgentRunrConfiguration {
     }
 
     @Bean
-    @ConditionalOnProperty(name = "agent.browser.brave.api-key")
-    public BraveWebSearchTool braveWebSearchTool(@Value("${agent.browser.brave.api-key}") String braveApiKey) {
-        return BraveWebSearchTool.builder(braveApiKey).resultCount(15).build();
+    public ChatMemory chatMemory(ChatMemoryRepository chatMemoryRepository) {
+        return MessageWindowChatMemory.builder().chatMemoryRepository(chatMemoryRepository).build();
     }
 
     @Bean
@@ -66,7 +65,7 @@ public class AgentRunrConfiguration {
                                  TaskManager taskManager,
                                  ConfigurationManager configurationManager,
                                  @Value("${agent.workspace:Unknown}") Resource workspace,
-                                 Optional<BraveWebSearchTool> braveWebSearchToolsObjectProvider
+                                 Set<AutoDiscoveredTool<?>> autoDiscoveredTools
     ) throws IOException {
 
         String agentPrompt = workspace.createRelative("AGENT.md").getContentAsString(StandardCharsets.UTF_8) + System.lineSeparator()
@@ -89,11 +88,10 @@ public class AgentRunrConfiguration {
                         SmartWebFetchTool.builder(chatClientBuilder.clone().build()).build())
                 .defaultAdvisors(
                         ToolCallAdvisor.builder().build(),
-                        MessageChatMemoryAdvisor.builder(MessageWindowChatMemory.builder().chatMemoryRepository(new InMemoryChatMemoryRepository()).build()).build()
+                        MessageChatMemoryAdvisor.builder(chatMemory).build()
                 );
 
-        braveWebSearchToolsObjectProvider.ifPresent(chatClientBuilder::defaultTools);
-
+        autoDiscoveredTools.forEach(autoDiscoveredTool -> chatClientBuilder.defaultTools(autoDiscoveredTool.tool()));
         return chatClientBuilder.build();
     }
 
