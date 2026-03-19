@@ -40,6 +40,13 @@ public class TaskManager {
         log.info("Task '{}' ({}) has been scheduled recurrently with cronExpression {}.", name, recurringTask.getId(), cronExpression);
     }
 
+    public void deleteRecurringTask(String name) {
+        RecurringTask recurringTask = taskRepository.getRecurringTaskByName(name);
+        jobScheduler.deleteRecurringJob(name);
+        taskRepository.deleteRecurringTask(recurringTask.getId());
+        log.info("Recurring task '{}' ({}) has been deleted.", name, recurringTask.getId());
+    }
+
     public void createTaskFromRecurringTask(RecurringTask recurringTask) {
         Task task = taskRepository.save(Task.newTask(recurringTask.getName(), recurringTask.getDescription()));
         jobScheduler.<TaskHandler>enqueue(x -> x.executeTask(task.getId()));

@@ -24,6 +24,7 @@ import static org.jobrunr.server.BackgroundJobServerConfiguration.usingStandardB
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 
@@ -92,6 +93,27 @@ class TaskManagerTest {
             assert jobs.getFirst().getId().equals("check-mail");
             assert jobs.getFirst().getScheduleExpression().equals(cronExpression);
         });
+    }
+
+    @Test
+    void deleteRecurringTaskRemovesFromJobRunr() {
+        String cronExpression = "0 */15 * * *";
+        RecurringTask saved = new RecurringTask("some-id", "check-mail", "Check the inbox every 15 minutes");
+        when(taskRepositoryMock.save(any(RecurringTask.class))).thenReturn(saved);
+        when(taskRepositoryMock.getRecurringTaskByName("check-mail")).thenReturn(saved);
+
+        taskManager.scheduleRecurrently(cronExpression, "check-mail", "Check the inbox every 15 minutes");
+
+        await().untilAsserted(() -> {
+            assert storageProvider.getRecurringJobs().size() == 1;
+        });
+
+        taskManager.deleteRecurringTask("check-mail");
+
+        await().untilAsserted(() -> {
+            assert storageProvider.getRecurringJobs().isEmpty();
+        });
+        verify(taskRepositoryMock).deleteRecurringTask("some-id");
     }
 
     private @NonNull JobActivator getJobActivator() {

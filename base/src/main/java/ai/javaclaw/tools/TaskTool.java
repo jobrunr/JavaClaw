@@ -100,6 +100,22 @@ public class TaskTool {
         }
     }
 
+    @Tool(description = """
+            Deletes a recurring task by name, stopping it from running again.
+            Use this when a user wants to remove, cancel, or stop a recurring task.
+
+            - name: The name of the recurring task to delete (e.g., 'weekly-log-cleanup').
+            """)
+    public String deleteRecurringTask(String name) {
+        try {
+            this.taskManager.deleteRecurringTask(name);
+            return String.format("Recurring task '%s' has been deleted successfully.", name);
+        } catch (Exception e) {
+            logger.error("Failed to delete recurring task", e);
+            return "Error: Could not delete recurring task. " + e.getMessage();
+        }
+    }
+
     public static Builder builder() {
         return new Builder();
     }
