@@ -2,6 +2,8 @@
 
 JavaClaw is a Java-based personal AI assistant that runs on your own devices. It acts as a control plane (gateway) for an AI agent that can interact across multiple communication channels, manage tasks, execute shell commands, browse the web, and more — all while keeping your data local.
 
+> NOTE: this project is meant as a demo to show the use of JobRunr to the Java community ☕.
+
 ## Features
 
 - **Multi-Channel Support** — Telegram (built-in), Chat UI (WebSocket), and an extensible channel architecture for adding more platforms
