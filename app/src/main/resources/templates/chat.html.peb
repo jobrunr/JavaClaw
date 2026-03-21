@@ -155,6 +155,9 @@
         </div>
         <div class="navbar-end">
             <div class="navbar-item">
+                <div class="select is-small is-dark" id="channel-selector"></div>
+            </div>
+            <div class="navbar-item">
                 <a href="/onboarding" class="button is-small is-dark">
                     <span>Settings</span>
                 </a>
@@ -173,10 +176,6 @@
     <div class="chat-body">
         <div class="container">
             <div id="chat-messages">
-                <article class="ar-msg ar-msg--agent">
-                    <div class="ar-msg__avatar">JC</div>
-                    <div class="ar-msg__bubble">Hi! I'm your JavaClaw assistant. How can I help you today?</div>
-                </article>
             </div>
             <div id="typing-indicator"></div>
         </div>
@@ -184,7 +183,8 @@
 
     <div class="chat-footer">
         <div class="container">
-            <form id="chat-form" ws-send hx-boost="false">
+            <form id="chat-form" ws-send hx-boost="false"
+                  hx-vals='js:{"type": "userMessage", "conversationId": document.getElementById("channel-select") ? document.getElementById("channel-select").value : "web"}'>
                 <div class="field is-grouped" style="align-items: flex-end; margin: 0;">
                     <div class="control is-expanded">
                         <textarea id="message-input" class="textarea" name="message" rows="1"
