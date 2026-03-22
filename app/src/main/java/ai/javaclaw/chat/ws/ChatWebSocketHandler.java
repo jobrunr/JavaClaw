@@ -40,9 +40,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         String selector = ChatHtml.conversationSelector(ids, selectedId);
         String bubbles = String.join("", chatChannel.loadHistoryAsHtml(selectedId));
+        String inputArea = ChatHtml.chatInputArea(selectedId);
         session.sendMessage(new TextMessage(
                 Htmx.oobInnerHtml("channel-selector", selector) +
-                Htmx.oobInnerHtml("chat-messages", bubbles)
+                Htmx.oobInnerHtml("chat-messages", bubbles) +
+                Htmx.oobInnerHtml("chat-input-area", inputArea)
         ));
     }
 
@@ -70,7 +72,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         if (conversationId == null || conversationId.isBlank()) return;
 
         String bubbles = String.join("", chatChannel.loadHistoryAsHtml(conversationId));
-        chatChannel.sendHtml(Htmx.oobInnerHtml("chat-messages", bubbles));
+        String inputArea = ChatHtml.chatInputArea(conversationId);
+        chatChannel.sendHtml(
+                Htmx.oobInnerHtml("chat-messages", bubbles) +
+                Htmx.oobInnerHtml("chat-input-area", inputArea)
+        );
     }
 
     private void handleUserMessage(Map<String, Object> payload) throws Exception {
