@@ -44,3 +44,4 @@ workspace/skills/*
 workspace/tasks/*
 workspace/app.*
 *.private*
+workspace/conversations/*

@@ -4,17 +4,23 @@ import ai.javaclaw.agent.Agent;
 import ai.javaclaw.channels.Channel;
 import ai.javaclaw.channels.ChannelMessageReceivedEvent;
 import ai.javaclaw.channels.ChannelRegistry;
+import ai.javaclaw.speech.SpeechToTextService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
 import org.telegram.telegrambots.longpolling.starter.SpringLongPollingBot;
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
+import org.telegram.telegrambots.meta.api.methods.GetFile;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URI;
 
 import static java.util.Optional.ofNullable;
 
@@ -26,19 +32,21 @@ public class TelegramChannel implements Channel, SpringLongPollingBot, LongPolli
     private final TelegramClient telegramClient;
     private final Agent agent;
     private final ChannelRegistry channelRegistry;
+    private final SpeechToTextService speechToTextService;
     private Long chatId;
     private Integer messageThreadId;
 
-    public TelegramChannel(String botToken, String allowedUsername, Agent agent, ChannelRegistry channelRegistry) {
-        this(botToken, allowedUsername, new OkHttpTelegramClient(botToken), agent, channelRegistry);
+    public TelegramChannel(String botToken, String allowedUsername, Agent agent, ChannelRegistry channelRegistry, SpeechToTextService speechToTextService) {
+        this(botToken, allowedUsername, new OkHttpTelegramClient(botToken), agent, channelRegistry, speechToTextService);
     }
 
-    TelegramChannel(String botToken, String allowedUsername, TelegramClient telegramClient, Agent agent, ChannelRegistry channelRegistry) {
+    TelegramChannel(String botToken, String allowedUsername, TelegramClient telegramClient, Agent agent, ChannelRegistry channelRegistry, SpeechToTextService speechToTextService) {
         this.botToken = botToken;
         this.allowedUsername = normalizeUsername(allowedUsername);
         this.telegramClient = telegramClient;
         this.agent = agent;
         this.channelRegistry = channelRegistry;
+        this.speechToTextService = speechToTextService;
         channelRegistry.registerChannel(this);
         log.info("Started Telegram integration");
     }
@@ -55,7 +63,7 @@ public class TelegramChannel implements Channel, SpringLongPollingBot, LongPolli
 
     @Override
     public void consume(Update update) {
-        if (!(update.hasMessage() && update.getMessage().hasText())) return;
+        if (!update.hasMessage()) return;
 
         Message requestMessage = update.getMessage();
         String userName = requestMessage.getFrom() == null ? null : requestMessage.getFrom().getUserName();
@@ -65,12 +73,29 @@ public class TelegramChannel implements Channel, SpringLongPollingBot, LongPolli
             return;
         }
 
-        String messageText = requestMessage.getText();
-        this.chatId = requestMessage.getChatId();
-        this.messageThreadId = requestMessage.getMessageThreadId();
-        channelRegistry.publishMessageReceivedEvent(new TelegramChannelMessageReceivedEvent(getName(), messageText, chatId, messageThreadId));
-        String response = agent.respondTo(getConversationId(chatId, messageThreadId), messageText);
-        sendMessage(chatId, messageThreadId, response);
+        if (requestMessage.hasText()) {
+            // Check text message
+            String messageText = requestMessage.getText();
+            this.chatId = requestMessage.getChatId();
+            this.messageThreadId = requestMessage.getMessageThreadId();
+            channelRegistry.publishMessageReceivedEvent(new TelegramChannelMessageReceivedEvent(getName(), messageText, chatId, messageThreadId));
+            String response = agent.respondTo(getConversationId(chatId, messageThreadId), messageText);
+            sendMessage(chatId, messageThreadId, response);
+        } else if (requestMessage.hasVoice()) {
+            // Check voice message & download it
+            log.info("Voice message received");
+            try (InputStream voiceStream = downloadVoice(requestMessage)) {
+                String transcribedText = speechToTextService.transcribe(voiceStream);
+                log.info("Voice message transcribed: {}", transcribedText);
+                this.chatId = requestMessage.getChatId();
+                this.messageThreadId = requestMessage.getMessageThreadId();
+                channelRegistry.publishMessageReceivedEvent(new TelegramChannelMessageReceivedEvent(getName(), transcribedText, chatId, messageThreadId));
+                String response = agent.respondTo(getConversationId(chatId, messageThreadId), transcribedText);
+                sendMessage(chatId, messageThreadId, response);
+            } catch (IOException | TelegramApiException e) {
+                log.error("Failed to process voice message", e);
+            }
+        }
     }
 
     @Override
@@ -93,6 +118,14 @@ public class TelegramChannel implements Channel, SpringLongPollingBot, LongPolli
         } catch (TelegramApiException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private InputStream downloadVoice(Message message) throws TelegramApiException, IOException {
+        String fileId = message.getVoice().getFileId();
+        GetFile getFile = new GetFile(fileId);
+        String filePath = telegramClient.execute(getFile).getFilePath();
+        String fileUrl = "https://api.telegram.org/file/bot" + botToken + "/" + filePath;
+        return URI.create(fileUrl).toURL().openStream();
     }
 
     private boolean isAllowedUser(String userName) {

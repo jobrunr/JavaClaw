@@ -2,6 +2,7 @@ package ai.javaclaw.channels.telegram;
 
 import ai.javaclaw.agent.Agent;
 import ai.javaclaw.channels.ChannelRegistry;
+import ai.javaclaw.speech.SpeechToTextService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -31,6 +32,9 @@ class TelegramChannelTest {
     @Mock
     private Agent agent;
 
+    @Mock
+    private SpeechToTextService speechToTextService;
+
     // -----------------------------------------------------------------------
     // Ignored updates
     // -----------------------------------------------------------------------
@@ -47,13 +51,17 @@ class TelegramChannelTest {
     }
 
     @Test
-    void ignoresUpdatesWithoutText() {
+    void ignoresUpdatesWithoutTextOrVoice() {
         TelegramChannel channel = channel("allowed_user");
         Update update = mock(Update.class);
         Message message = mock(Message.class);
+        User user = mock(User.class);
         when(update.hasMessage()).thenReturn(true);
         when(update.getMessage()).thenReturn(message);
+        when(message.getFrom()).thenReturn(user);
+        when(user.getUserName()).thenReturn("allowed_user");
         when(message.hasText()).thenReturn(false);
+        when(message.hasVoice()).thenReturn(false);
 
         channel.consume(update);
 
@@ -67,7 +75,6 @@ class TelegramChannelTest {
         Message message = mock(Message.class);
         when(update.hasMessage()).thenReturn(true);
         when(update.getMessage()).thenReturn(message);
-        when(message.hasText()).thenReturn(true);
         when(message.getFrom()).thenReturn(null);
 
         channel.consume(update);
@@ -195,7 +202,7 @@ class TelegramChannelTest {
     // -----------------------------------------------------------------------
 
     private TelegramChannel channel(String allowedUsername) {
-        return new TelegramChannel("token", allowedUsername, telegramClient, agent, new ChannelRegistry());
+        return new TelegramChannel("token", allowedUsername, telegramClient, agent, new ChannelRegistry(), speechToTextService);
     }
 
     private Update updateFromUnknownUser(String username) {
@@ -204,7 +211,6 @@ class TelegramChannelTest {
         User user = mock(User.class);
         when(update.hasMessage()).thenReturn(true);
         when(update.getMessage()).thenReturn(message);
-        when(message.hasText()).thenReturn(true);
         when(message.getFrom()).thenReturn(user);
         when(user.getUserName()).thenReturn(username);
         return update;
