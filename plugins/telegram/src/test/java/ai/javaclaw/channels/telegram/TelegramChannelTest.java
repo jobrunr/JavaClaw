@@ -226,4 +226,26 @@ class TelegramChannelTest {
 
         return update;
     }
+    // -----------------------------------------------------------------------
+// Message formatting (Markdown → HTML)
+// -----------------------------------------------------------------------
+
+    @Test
+    void formatsMarkdownToHtmlAndSetsParseMode() throws TelegramApiException {
+        TelegramChannel channel = channel("allowed_user");
+
+        // Mock agent response with Markdown
+        when(agent.respondTo(anyString(), anyString()))
+                .thenReturn("Here is **bold** text and a [link](http://example.com)");
+
+        // Trigger message consumption
+        channel.consume(updateFrom("allowed_user", "hello", 42L, null));
+
+        // Verify transformation + parse mode
+        verify(telegramClient).execute(argThat((SendMessage msg) ->
+                "HTML".equals(msg.getParseMode()) &&
+                        "Here is <b>bold</b> text and a <a href=\"http://example.com\">link</a>"
+                                .equals(msg.getText())
+        ));
+    }
 }
