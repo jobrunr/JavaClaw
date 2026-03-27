@@ -10,17 +10,28 @@ import org.telegram.telegrambots.client.okhttp.OkHttpTelegramClient;
 import org.telegram.telegrambots.longpolling.interfaces.LongPollingUpdateConsumer;
 import org.telegram.telegrambots.longpolling.starter.SpringLongPollingBot;
 import org.telegram.telegrambots.longpolling.util.LongPollingSingleThreadUpdateConsumer;
+import org.telegram.telegrambots.meta.api.methods.ParseMode;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.message.Message;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 import org.telegram.telegrambots.meta.generics.TelegramClient;
+import org.commonmark.node.Node;
+import org.commonmark.parser.Parser;
+import org.commonmark.renderer.html.HtmlRenderer;
 
 import static java.util.Optional.ofNullable;
 
 public class TelegramChannel implements Channel, SpringLongPollingBot, LongPollingSingleThreadUpdateConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(TelegramChannel.class);
+
+    private static final Parser MARKDOWN_PARSER = Parser.builder().build();
+    private static final HtmlRenderer HTML_RENDERER = HtmlRenderer.builder()
+            .softbreak("<br />")
+            .escapeHtml(true)
+            .build();
+
     private final String botToken;
     private final String allowedUsername;
     private final TelegramClient telegramClient;
@@ -83,16 +94,52 @@ public class TelegramChannel implements Channel, SpringLongPollingBot, LongPolli
     }
 
     public void sendMessage(long chatId, Integer messageThreadId, String message) {
-        SendMessage messageMessage = SendMessage.builder()
+        String formattedHtmlMessage = convertMarkdownToTelegramHtml(message);
+
+        SendMessage htmlMessage = SendMessage.builder()
                 .chatId(chatId)
                 .messageThreadId(messageThreadId)
-                .text(message)
+                .text(formattedHtmlMessage)
+                .parseMode(ParseMode.HTML)
                 .build();
+
         try {
-            telegramClient.execute(messageMessage);
+            telegramClient.execute(htmlMessage);
         } catch (TelegramApiException e) {
-            throw new RuntimeException(e);
+            log.warn("Failed to send HTML parsed message, falling back to raw text. Error: {}", e.getMessage());
+
+            SendMessage fallbackMessage = SendMessage.builder()
+                    .chatId(chatId)
+                    .messageThreadId(messageThreadId)
+                    .text(message)
+                    .build();
+            try {
+                telegramClient.execute(fallbackMessage);
+            } catch (TelegramApiException fallbackEx) {
+                throw new RuntimeException("Failed to send both HTML and fallback messages", fallbackEx);
+            }
         }
+    }
+
+    private String convertMarkdownToTelegramHtml(String markdown) {
+        if (markdown == null || markdown.isBlank()) return "";
+
+        Node document = MARKDOWN_PARSER.parse(markdown);
+        String html = HTML_RENDERER.render(document);
+
+        // Minimalist replacement logic to handle unsupported structural tags
+        return html.replace("<p>", "").replace("</p>", "<br />")
+                .replaceAll("(?s)<h[1-6]>(.*?)</h[1-6]>", "<b>$1</b><br />")
+                .replaceAll("(?s)<li>(.*?)</li>", "- $1<br />")
+                .replace("<ul>", "").replace("</ul>", "")
+                .replace("<ol>", "").replace("</ol>", "")
+                .replaceAll("(?s)<th>(.*?)</th>", "<b>$1</b> | ")
+                .replaceAll("(?s)<td>(.*?)</td>", "$1 | ")
+                .replaceAll("(?s)<tr>(.*?)</tr>", "$1<br />")
+                .replace("<table>", "").replace("</table>", "")
+                .replace("<thead>", "").replace("</thead>", "")
+                .replace("<tbody>", "").replace("</tbody>", "")
+                .trim();
     }
 
     private boolean isAllowedUser(String userName) {
