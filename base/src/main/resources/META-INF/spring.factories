@@ -1,0 +1,2 @@
+org.springframework.context.ApplicationContextInitializer=\
+ai.javaclaw.mcp.McpStdioArgsNormalizerApplicationContextInitializer
