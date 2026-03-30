@@ -36,16 +36,15 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         log.info("WebChat WebSocket connected: {}", session.getId());
 
         List<String> ids = chatChannel.conversationIds();
-        String selectedId = ids.get(0);
+        String selectedId = ids.getFirst();
 
-        String selector = ChatHtml.conversationSelector(ids, selectedId);
-        String bubbles = String.join("", chatChannel.loadHistoryAsHtml(selectedId));
+        String conversationSelector = ChatHtml.conversationSelector(ids, selectedId);
+        String bubbles = String.join(System.lineSeparator(), chatChannel.loadHistoryAsHtml(selectedId));
         String inputArea = ChatHtml.chatInputArea(selectedId);
-        session.sendMessage(new TextMessage(
-                Htmx.oobInnerHtml("channel-selector", selector) +
-                        Htmx.oobInnerHtml("chat-messages", bubbles) +
-                        Htmx.oobInnerHtml("chat-input-area", inputArea)
-        ));
+        chatChannel.sendHtml(
+                Htmx.oobInnerHtml("channel-selector", conversationSelector),
+                Htmx.oobInnerHtml("chat-messages", bubbles),
+                Htmx.oobInnerHtml("chat-input-area", inputArea));
     }
 
     @Override
@@ -71,12 +70,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         String conversationId = (String) payload.get("conversationId");
         if (conversationId == null || conversationId.isBlank()) return;
 
-        String bubbles = String.join("", chatChannel.loadHistoryAsHtml(conversationId));
+        String bubbles = String.join(System.lineSeparator(), chatChannel.loadHistoryAsHtml(conversationId));
         String inputArea = ChatHtml.chatInputArea(conversationId);
         chatChannel.sendHtml(
-                Htmx.oobInnerHtml("chat-messages", bubbles) +
-                        Htmx.oobInnerHtml("chat-input-area", inputArea)
-        );
+                Htmx.oobInnerHtml("chat-messages", bubbles),
+                Htmx.oobInnerHtml("chat-input-area", inputArea));
     }
 
     private void handleUserMessage(Map<String, Object> payload) throws Exception {
@@ -89,25 +87,21 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
         // Echo user message + show typing indicator
         chatChannel.sendHtml(
-                Htmx.oobAppend("chat-messages", ChatHtml.userBubble(userMessage)) +
-                        Htmx.oobReplace("typing-indicator", ChatHtml.typingDots())
-        );
+                Htmx.oobAppend("chat-messages", ChatHtml.userBubble(userMessage)),
+                Htmx.oobReplace("typing-indicator", ChatHtml.typingDots()));
 
-        String bubbleHtml;
         try {
             // Call agent (blocking — background tasks may push messages via ChatChannel during this)
             String response = chatChannel.chat(conversationId, userMessage);
-            bubbleHtml = ChatHtml.agentBubble(response);
-        }  catch (RuntimeException ex) {
+            chatChannel.sendHtml(
+                    Htmx.oobAppend("chat-messages", ChatHtml.agentBubble(response)),
+                    Htmx.oobReplace("typing-indicator", ""));
+        } catch (RuntimeException ex) {
             log.warn("Chat request failed for conversation {}", conversationId, ex);
-            bubbleHtml = ChatHtml.agentBubble(genericUserFacingError(ex));
+            chatChannel.sendHtml(
+                    Htmx.oobAppend("chat-messages", ChatHtml.agentBubble(genericUserFacingError(ex))),
+                    Htmx.oobReplace("typing-indicator", ""));
         }
-
-        // Send agent response or error + clear typing indicator
-        chatChannel.sendHtml(
-                Htmx.oobAppend("chat-messages", bubbleHtml) +
-                        Htmx.oobReplace("typing-indicator", "")
-        );
     }
 
     private static String genericUserFacingError(RuntimeException ex) {
