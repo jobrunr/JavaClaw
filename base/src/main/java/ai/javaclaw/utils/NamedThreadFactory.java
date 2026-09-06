@@ -1,4 +1,4 @@
-package ai.javaclaw.utils.threads;
+package ai.javaclaw.utils;
 
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.atomic.AtomicInteger;

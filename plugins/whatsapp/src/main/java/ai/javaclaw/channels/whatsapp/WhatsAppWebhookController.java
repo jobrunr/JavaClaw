@@ -1,6 +1,6 @@
 package ai.javaclaw.channels.whatsapp;
 
-import ai.javaclaw.utils.threads.NamedThreadFactory;
+import ai.javaclaw.utils.NamedThreadFactory;
 import jakarta.annotation.PreDestroy;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.ResponseEntity;
