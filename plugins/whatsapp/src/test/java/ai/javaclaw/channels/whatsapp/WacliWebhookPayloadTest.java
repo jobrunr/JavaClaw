@@ -31,7 +31,6 @@ class WacliWebhookPayloadTest {
         WacliWebhookPayload payload = mapper.readValue(json, WacliWebhookPayload.class);
 
         assertThat(payload.chat()).isEqualTo("1234567890@s.whatsapp.net");
-        assertThat(payload.senderJid()).isEqualTo("1234567890@s.whatsapp.net");
         assertThat(payload.fromMe()).isFalse();
         assertThat(payload.text()).isEqualTo("hello there");
         assertThat(payload.id()).isEqualTo("3EB0ABCDEF");

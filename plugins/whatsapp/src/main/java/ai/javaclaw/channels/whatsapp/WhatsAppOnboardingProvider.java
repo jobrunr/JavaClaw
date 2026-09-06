@@ -1,44 +1,45 @@
 package ai.javaclaw.channels.whatsapp;
 
-import ai.javaclaw.cli.CliRunner;
-import ai.javaclaw.cli.CliRunner.CliResult;
 import ai.javaclaw.configuration.ConfigurationManager;
 import ai.javaclaw.onboarding.OnboardingProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Component
-@Order(56)
+@Order(55)
 public class WhatsAppOnboardingProvider implements OnboardingProvider {
 
     static final String SESSION_ALLOWED_JID = "onboarding.whatsapp.allowed-chat-jid";
 
-    private static final String ENABLED_PROPERTY = "agent.channels.whatsapp.enabled";
-    private static final String ALLOWED_JID_PROPERTY = "agent.channels.whatsapp.allowed-chat-jid";
+    private static final String CONFIG_ENABLED = "agent.channels.whatsapp.enabled";
+    private static final String CONFIG_ALLOWED_JID = "agent.channels.whatsapp.allowed-chat-jid";
 
-    private static final Pattern JID_PATTERN = Pattern.compile("^[0-9A-Za-z._-]+@(s\\.whatsapp\\.net|g\\.us|lid|newsletter|broadcast)$");
+    /**
+     * A one-to-one chat JID. Groups, newsletters and broadcasts are deliberately not accepted:
+     * the assistant authorises by chat, so a chat with more than one other person in it would let
+     * any of them command it.
+     *
+     * <p>Unanchored, so it also picks the JID out of a whole line chosen from the chat list, such
+     * as {@code "Alice - 1234567890@s.whatsapp.net"}. The trailing look-ahead stops it matching
+     * inside a longer word.
+     */
+    private static final Pattern JID_PATTERN =
+            Pattern.compile("[0-9A-Za-z._-]+@(?:s\\.whatsapp\\.net|lid)(?![0-9A-Za-z._-])");
 
     private final Environment env;
-    private final WacliCli wacliCli;
+    private final WhatsApp whatsApp;
 
-    @Autowired
-    public WhatsAppOnboardingProvider(Environment env, CliRunner cliRunner) {
-        this(env, new DefaultWacliCli(cliRunner, env.getProperty("agent.channels.whatsapp.wacli-path", "wacli")));
-
-    }
-
-    WhatsAppOnboardingProvider(Environment env, WacliCli wacliCli) {
+    public WhatsAppOnboardingProvider(Environment env, WhatsApp whatsApp) {
         this.env = env;
-        this.wacliCli = wacliCli;
+        this.whatsApp = whatsApp;
     }
 
     @Override
@@ -55,31 +56,34 @@ public class WhatsAppOnboardingProvider implements OnboardingProvider {
 
     @Override
     public void prepareModel(Map<String, Object> session, Map<String, Object> model) {
-        boolean installed = wacliCli.isInstalled();
+        boolean installed = whatsApp.isInstalled();
+        boolean paired = installed && whatsApp.isPaired();
         model.put("wacliInstalled", installed);
-        model.put("wacliPaired", installed && wacliCli.isPaired());
+        model.put("wacliPaired", paired);
+        model.put("whatsappChats", paired ? whatsApp.oneToOneChats() : List.of());
         model.put("whatsappAllowedChatJid", session.getOrDefault(SESSION_ALLOWED_JID,
-                env.getProperty(ALLOWED_JID_PROPERTY, "")));
+                env.getProperty(CONFIG_ALLOWED_JID, "")));
     }
 
     @Override
     public String processStep(Map<String, String> formParams, Map<String, Object> session) {
-        if (!wacliCli.isInstalled()) {
-            return "wacli is not installed. Install it (macOS: 'brew install openclaw/tap/wacli', "
-                    + "Linux: 'go install github.com/openclaw/wacli@latest') and try again.";
+        if (!whatsApp.isInstalled()) {
+            return "wacli is not installed. " + WhatsApp.INSTALL_HINT + " Then try again.";
         }
 
-        String jid = normalizeJid(formParams.get("whatsappAllowedChatJid"));
-        if (jid == null) {
-            return "Enter the WhatsApp chat JID in the format 1234567890@s.whatsapp.net.";
+        String chosen = formParams.getOrDefault("whatsappAllowedChatJid", "").trim();
+        if (chosen.isBlank()) {
+            return "Choose the WhatsApp chat the assistant should answer in.";
         }
-        if (!JID_PATTERN.matcher(jid).matches()) {
-            return "That doesn't look like a valid WhatsApp chat JID. Use the format 1234567890@s.whatsapp.net.";
+        String jid = extractJid(chosen);
+        if (jid == null) {
+            return "That is not a one-to-one WhatsApp chat. Pick one from the list, or run "
+                    + "'wacli chats list' in your terminal to find its JID. Groups are not supported.";
         }
 
         session.put(SESSION_ALLOWED_JID, jid);
 
-        if (!wacliCli.isPaired()) {
+        if (!whatsApp.isPaired()) {
             return "wacli is not paired yet. Run 'wacli auth' in your terminal, scan the QR code with "
                     + "WhatsApp on your phone (Linked devices), then click Continue.";
         }
@@ -94,55 +98,19 @@ public class WhatsAppOnboardingProvider implements OnboardingProvider {
             return;
         }
         Map<String, Object> properties = new LinkedHashMap<>();
-        properties.put(ENABLED_PROPERTY, true);
-        properties.put(ALLOWED_JID_PROPERTY, jid);
+        properties.put(CONFIG_ENABLED, true);
+        properties.put(CONFIG_ALLOWED_JID, jid);
         configurationManager.updateProperties(properties);
     }
 
-    private static String normalizeJid(String jid) {
-        if (jid == null) {
-            return null;
-        }
-        String normalized = jid.trim();
-        return normalized.isBlank() ? null : normalized;
-    }
-
-    interface WacliCli {
-        boolean isInstalled();
-
-        boolean isPaired();
-    }
-
-    static class DefaultWacliCli implements WacliCli {
-
-        private final CliRunner cliRunner;
-        private final String wacliPath;
-
-        DefaultWacliCli(CliRunner cliRunner, String wacliPath) {
-            this.cliRunner = cliRunner;
-            this.wacliPath = wacliPath;
-        }
-
-        @Override
-        public boolean isInstalled() {
-            return runQuietly(List.of(wacliPath, "version"));
-        }
-
-        @Override
-        public boolean isPaired() {
-            return runQuietly(Arrays.asList(wacliPath, "auth", "status", "--json"));
-        }
-
-        private boolean runQuietly(List<String> command) {
-            try {
-                CliResult result = cliRunner.run(command);
-                return result.exitCode() == 0;
-            } catch (IOException e) {
-                return false;
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return false;
-            }
-        }
+    /**
+     * Pulls the JID out of what the form sent, which is either a plain JID that was typed or
+     * pasted, or a whole line picked from the chat list.
+     *
+     * @return the JID, or {@code null} if there is no one-to-one chat JID in there
+     */
+    private static String extractJid(String chosen) {
+        Matcher matcher = JID_PATTERN.matcher(chosen);
+        return matcher.find() ? matcher.group() : null;
     }
 }

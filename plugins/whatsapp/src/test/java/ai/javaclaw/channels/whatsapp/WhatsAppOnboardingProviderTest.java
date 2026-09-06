@@ -8,10 +8,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.env.Environment;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static ai.javaclaw.channels.whatsapp.WhatsAppOnboardingProvider.SESSION_ALLOWED_JID;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -26,17 +29,10 @@ class WhatsAppOnboardingProviderTest {
     ConfigurationManager configurationManager;
 
     private WhatsAppOnboardingProvider provider(boolean installed, boolean paired) {
-        return new WhatsAppOnboardingProvider(environment, new WhatsAppOnboardingProvider.WacliCli() {
-            @Override
-            public boolean isInstalled() {
-                return installed;
-            }
-
-            @Override
-            public boolean isPaired() {
-                return paired;
-            }
-        });
+        WhatsApp whatsApp = mock(WhatsApp.class);
+        lenient().when(whatsApp.isInstalled()).thenReturn(installed);
+        lenient().when(whatsApp.isPaired()).thenReturn(paired);
+        return new WhatsAppOnboardingProvider(environment, whatsApp);
     }
 
     @Test
@@ -64,7 +60,41 @@ class WhatsAppOnboardingProviderTest {
 
         String result = provider.processStep(Map.of("whatsappAllowedChatJid", "not-a-jid"), new HashMap<>());
 
-        assertThat(result).contains("valid WhatsApp chat JID");
+        assertThat(result).contains("not a one-to-one WhatsApp chat");
+    }
+
+    @Test
+    void processStepRejectsChatsWithMoreThanOnePersonInThem() {
+        WhatsAppOnboardingProvider provider = provider(true, true);
+
+        for (String manyPeople : List.of("120363@g.us", "123@newsletter", "123@broadcast")) {
+            Map<String, Object> session = new HashMap<>();
+
+            String result = provider.processStep(Map.of("whatsappAllowedChatJid", manyPeople), session);
+
+            assertThat(result).as(manyPeople).contains("not a one-to-one WhatsApp chat");
+            assertThat(session).as(manyPeople).doesNotContainKey(SESSION_ALLOWED_JID);
+        }
+    }
+
+    @Test
+    void processStepTakesTheJidOutOfALinePickedFromTheChatList() {
+        WhatsAppOnboardingProvider provider = provider(true, true);
+        Map<String, Object> session = new HashMap<>();
+
+        String result = provider.processStep(Map.of("whatsappAllowedChatJid", "Alice Smith — 95318997741682@lid"), session);
+
+        assertThat(result).isNull();
+        assertThat(session).containsEntry(SESSION_ALLOWED_JID, "95318997741682@lid");
+    }
+
+    @Test
+    void processStepAsksForAChatWhenNothingWasChosen() {
+        WhatsAppOnboardingProvider provider = provider(true, true);
+
+        String result = provider.processStep(Map.of("whatsappAllowedChatJid", "  "), new HashMap<>());
+
+        assertThat(result).contains("Choose the WhatsApp chat");
     }
 
     @Test

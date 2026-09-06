@@ -160,15 +160,22 @@ agent:
   channels:
     whatsapp:
       enabled: true
-      wacli-path: wacli
       allowed-chat-jid: "1234567890@s.whatsapp.net"
-      store-path: ""
 ```
 
-`allowed-chat-jid` is the JID of the single WhatsApp chat the assistant responds in — a contact's
-number followed by `@s.whatsapp.net` (e.g. `1234567890@s.whatsapp.net`) or a group (`@g.us`). Only
-messages received in that chat are handled; messages you send yourself are ignored. `wacli-path`
-defaults to `wacli` on your `PATH`, and `store-path` is optional.
+`allowed-chat-jid` is the JID of the single WhatsApp chat the assistant responds in. During
+onboarding you pick it by name from your synced chats, so you rarely need to type it — WhatsApp also
+issues opaque `@lid` identifiers that cannot be derived from a phone number. To find one yourself:
+
+```bash
+wacli chats list                    # every chat, with its JID
+wacli chats list --query "alice"    # search by name
+```
+
+Only one-to-one chats are accepted. Groups, newsletters and broadcasts are deliberately refused:
+the assistant authorises by chat, so every member of a group would be able to instruct it — and the
+agent can run shell commands. Point it at your own "Message Yourself" chat to talk to the assistant
+from your own number. `wacli` itself is taken from your `PATH`.
 
 > **Disclaimer:** wacli uses the unofficial WhatsApp Web protocol — use at your own risk.
 
